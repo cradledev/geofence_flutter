@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "380600200961",
+    "project_id": "geo-fencing-flutter",
+    "storage_bucket": "geo-fencing-flutter.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:380600200961:android:d8e5bf33d284435bbbf500",
+        "android_client_info": {
+          "package_name": "com.example.geo_fence"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "380600200961-umkhrr0vcerhth0h664descb2sfmeka8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCyMerDlZakOMF3oDLvOK_5XW1pIdKRNs8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "380600200961-umkhrr0vcerhth0h664descb2sfmeka8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
