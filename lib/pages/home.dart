@@ -1,11 +1,19 @@
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:maps_toolkit/maps_toolkit.dart' as mt;
 
+import '../services/firestoreService.dart';
+
 class HomePage extends StatefulWidget {
+  const HomePage({required this.geoFenceData, required this.userId});
+
+  final List<Map<String, dynamic>> geoFenceData;
+  final String userId;
+
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -17,10 +25,14 @@ class _HomePageState extends State<HomePage> {
   );
 
   // Maps
-  final Set<Marker> _markers = HashSet<Marker>();
-  final Set<Polygon> _polygons = HashSet<Polygon>();
-  final Set<Circle> _circles = HashSet<Circle>();
-  final Set<Polyline> _polyLines = HashSet<Polyline>();
+  late Set<Marker> _markers = HashSet<Marker>();
+  late Set<Polygon> _polygons = HashSet<Polygon>();
+  late Set<Circle> _circles = HashSet<Circle>();
+  late Set<Polyline> _polyLines = HashSet<Polyline>();
+
+  late List<Map<String, dynamic>> markerMapData = <Map<String, dynamic>>[];
+  late List<Map<String, dynamic>> polygonMapData = <Map<String, dynamic>>[];
+  late List<Map<String, dynamic>> circleMapData = <Map<String, dynamic>>[];
 
   late GoogleMapController _googleMapController;
   late BitmapDescriptor _markerIcon;
@@ -32,9 +44,9 @@ class _HomePageState extends State<HomePage> {
   late Polygon? selectedPolygon;
   late Circle? selectedCircle;
   //ids
-  int _polygonIdCounter = 1;
-  int _circleIdCounter = 1;
-  int _markerIdCounter = 1;
+  // int _polygonIdCounter = 1;
+  // int _circleIdCounter = 1;
+  // int _markerIdCounter = 1;
   // int _polyLineIdCounter = 1;
 
   // Type controllers
@@ -51,13 +63,82 @@ class _HomePageState extends State<HomePage> {
     // If I want to change the marker icon:
     // _setMarkerIcon();
     onInit();
+    onMakingInitMapData();
   }
 
   // custom init function
   void onInit() {
+    FireStoreService.userUid = widget.userId;
     selectedMarker = null;
     selectedPolygon = null;
     selectedCircle = null;
+  }
+
+  void onMakingInitMapData() {
+    if (widget.geoFenceData.isNotEmpty) {
+      markerMapData = widget.geoFenceData
+          .where((e) => e['data']['type'] == "Marker")
+          .toList();
+      circleMapData = widget.geoFenceData
+          .where((e) => e['data']['type'] == "Circle")
+          .toList();
+      polygonMapData = widget.geoFenceData
+          .where((e) => e['data']['type'] == "Polygon")
+          .toList();
+
+      for (var i = 0; i < markerMapData.length; i++) {
+        var _data = jsonDecode(markerMapData[i]['data']['data']);
+        Marker _tmp = Marker(
+            markerId: MarkerId(_data['markerId']),
+            position: LatLng(_data['position'][0], _data['position'][1]),
+            consumeTapEvents: true,
+            onTap: () {
+              if (_isMarker) {
+                onInit();
+                getSelectedMarker(
+                    mt.LatLng(_data['position'][0], _data['position'][1]));
+                print(
+                    'selected marker is here ${selectedMarker?.markerId.value}');
+              }
+            });
+        print(_tmp);
+        setState(() {
+          _markers.add(_tmp);
+        });
+      }
+      for (var i = 0; i < circleMapData.length; i++) {
+        var _data = jsonDecode(circleMapData[i]['data']['data']);
+        Circle _tmp = Circle(
+            circleId: CircleId(_data['circleId']),
+            center: LatLng(_data['center'][0], _data['center'][1]),
+            radius: _data['radius'],
+            fillColor: Colors.redAccent.withOpacity(0.5),
+            strokeWidth: 3,
+            strokeColor: Colors.redAccent);
+        print(_tmp);
+        setState(() {
+          _circles.add(_tmp);
+        });
+      }
+      for (var i = 0; i < polygonMapData.length; i++) {
+        var _data = jsonDecode(polygonMapData[i]['data']['data']);
+        List<LatLng> _tmppolygonPoints = <LatLng>[];
+        for (var j = 0; j < _data['points'].length; j++) {
+          _tmppolygonPoints
+              .add(LatLng(_data['points'][j][0], _data['points'][j][1]));
+        }
+        Polygon _tmp = Polygon(
+            polygonId: PolygonId(_data['polygonId']),
+            points: _tmppolygonPoints,
+            strokeWidth: 2,
+            strokeColor: Colors.yellow,
+            fillColor: Colors.yellow.withOpacity(0.15));
+        print(_tmp);
+        setState(() {
+          _polygons.add(_tmp);
+        });
+      }
+    }
   }
 
   // This function is to change the marker icon
@@ -67,17 +148,24 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Draw Polygon to the map
-  void _setPolygon() {
-    final String polygonIdVal = 'polygon_id_$_polygonIdCounter';
-    _polygonIdCounter++;
+  void _setPolygon() async {
+    final String polygonIdVal =
+        'polygon_id_${DateTime.now().millisecondsSinceEpoch}';
+    // _polygonIdCounter++;
     // _polyLineIdCounter++;
-    _polygons.add(Polygon(
+    Polygon _tmp = Polygon(
       polygonId: PolygonId(polygonIdVal),
       points: polygonLatLngs,
       strokeWidth: 2,
       strokeColor: Colors.yellow,
       fillColor: Colors.yellow.withOpacity(0.15),
-    ));
+    );
+    _polygons.add(_tmp);
+    await FireStoreService.addItem(
+        title: "Polygon",
+        description: "Polygon is here",
+        type: "Polygon",
+        mapData: jsonEncode(_tmp));
   }
 
   // Draw PolyLines to the map
@@ -93,48 +181,53 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Set circles as points to the map
-  void _setCircles(LatLng point) {
-    final String circleIdVal = 'circle_id_$_circleIdCounter';
-    _circleIdCounter++;
+  void _setCircles(LatLng point) async {
+    final String circleIdVal =
+        'circle_id_${DateTime.now().millisecondsSinceEpoch}';
+    // _circleIdCounter++;
     print(
         'Circle | Latitude: ${point.latitude}  Longitude: ${point.longitude}  Radius: $radius');
-    _circles.add(Circle(
+    Circle _tmp = Circle(
         circleId: CircleId(circleIdVal),
         center: point,
         radius: radius,
         fillColor: Colors.redAccent.withOpacity(0.5),
         strokeWidth: 3,
-        strokeColor: Colors.redAccent));
+        strokeColor: Colors.redAccent);
+    _circles.add(_tmp);
+    await FireStoreService.addItem(
+        title: "Circle",
+        description: "Circle is here",
+        type: "Circle",
+        mapData: jsonEncode(_tmp));
   }
 
   // Set Markers to the map
-  void _setMarkers(LatLng point) {
-    final String markerIdVal = 'marker_id_$_markerIdCounter';
-    _markerIdCounter++;
-    setState(() {
-      print(
-          'Marker | Latitude: ${point.latitude}  Longitude: ${point.longitude}');
-      _markers.add(
-        Marker(
-            markerId: MarkerId(markerIdVal),
-            position: point,
-            infoWindow: const InfoWindow(
-                title: 'Marker Title', snippet: 'Marker snippet'),
-            consumeTapEvents: true,
-            onTap: () {
-              // print("Selected Marker position");
-              // print(point);
-              // print("current point is here");
-              // print(point);
-              if (_isMarker) {
-                onInit();
-                getSelectedMarker(mt.LatLng(point.latitude, point.longitude));
-                print(
-                    'selected marker is here ${selectedMarker?.markerId.value}');
-              }
-            }),
-      );
-    });
+  void _setMarkers(LatLng point) async {
+    final String markerIdVal =
+        'marker_id_${DateTime.now().millisecondsSinceEpoch}';
+    // _markerIdCounter++;
+    print(
+        'Marker | Latitude: ${point.latitude}  Longitude: ${point.longitude}');
+    Marker _tmp = Marker(
+        markerId: MarkerId(markerIdVal),
+        position: point,
+        // infoWindow:
+        //     const InfoWindow(title: 'Marker Title', snippet: 'Marker snippet'),
+        consumeTapEvents: true,
+        onTap: () {
+          if (_isMarker) {
+            onInit();
+            getSelectedMarker(mt.LatLng(point.latitude, point.longitude));
+            print('selected marker is here ${selectedMarker?.markerId.value}');
+          }
+        });
+    _markers.add(_tmp);
+    await FireStoreService.addItem(
+        title: "Marker",
+        description: "Marker is here",
+        type: "Marker",
+        mapData: jsonEncode(_tmp));
   }
 
   // Start the map with this marker setted up
@@ -249,16 +342,43 @@ class _HomePageState extends State<HomePage> {
     return _isInside;
   }
 
-  void onDeletSelectedShape() {
-    if (_isPolygon && _polygons.isNotEmpty && selectedPolygon != null) {}
-    if (_isCircle && _circles.isNotEmpty && selectedCircle != null) {}
+  Future<void> onDeletSelectedShape() async {
+    if (_isPolygon && _polygons.isNotEmpty && selectedPolygon != null) {
+      // Polygon _tempPolygon = _polygons.firstWhere(
+      //     (pPolygon) => pPolygon.polygonId.value == selectedPolygon?.polygonId.value,
+      //     orElse: () => null);
+      setState(() {
+        _polygons.removeWhere((element) =>
+            element.polygonId.value == selectedPolygon?.polygonId.value);
+      });
+      var _tmp = polygonMapData.firstWhere((element) => jsonDecode(element['data']['data'])['polygonId'] == selectedPolygon?.polygonId.value);
+
+      String _selectPolygonMapDataId = _tmp['id'];
+      await FireStoreService.deleteItem(docId: _selectPolygonMapDataId);
+    }
+    if (_isCircle && _circles.isNotEmpty && selectedCircle != null) {
+      // Circle _tempCircle = _circles.firstWhere(
+      //     (pCircle) => pCircle.circleId.value == selectedCircle?.circleId.value,
+      //     orElse: () => );
+      setState(() {
+        _circles.removeWhere((element) =>
+            element.circleId.value == selectedCircle?.circleId.value);
+      });
+      var _tmp = circleMapData.firstWhere((element) => jsonDecode(element['data']['data'])['circleId'] == selectedCircle?.circleId.value);
+      String _selectCircleMapDataId = _tmp['id'];
+      await FireStoreService.deleteItem(docId: _selectCircleMapDataId);
+    }
     if (_isMarker && _markers.length > 1 && selectedMarker != null) {
       // Marker marker = _markers.firstWhere(
       //     (marker) => marker.markerId.value == "myId",
       //     orElse: () => null);
-      // setState(() {
-      //   _markers.remove(marker);
-      // });
+      setState(() {
+        _markers.removeWhere(
+            (item) => item.markerId.value == selectedMarker?.markerId.value);
+      });
+      var _tmp = markerMapData.firstWhere((element) => jsonDecode(element['data']['data'])['markerId'] == selectedMarker?.markerId.value);
+      String _selectMarkerMapDataId = _tmp['id'];
+      await FireStoreService.deleteItem(docId: _selectMarkerMapDataId);
     }
   }
 
@@ -284,46 +404,55 @@ class _HomePageState extends State<HomePage> {
           height: 10,
         ),
         FloatingActionButton(
-          child: const Icon(Icons.draw),
+          child: Icon(
+              !_isStartingDrawing ? Icons.draw_outlined : Icons.exit_to_app),
           onPressed: () {
             setState(() {
               _isStartingDrawing = !_isStartingDrawing;
               // _isStartingDeleting = false;
             });
           },
-          backgroundColor: _isStartingDrawing
-              ? Colors.purple
-              : Colors.purple.withOpacity(0.6),
+          backgroundColor: Colors.purple,
           heroTag: null,
         ),
         const SizedBox(
           height: 10,
         ),
-        FloatingActionButton(
-          child: const Icon(Icons.save),
-          onPressed: () {
-            if (_isPolygon) {
-              setState(() {
-                _setPolygon();
-                polygonLatLngs = <LatLng>[];
-                _polyLines.clear();
-              });
-            }
-          },
-          heroTag: null,
-          backgroundColor: Colors.green,
-        ),
+        _isStartingDrawing
+            ? const SizedBox(
+                width: 0,
+                height: 0,
+              )
+            : FloatingActionButton(
+                child: const Icon(Icons.delete),
+                onPressed: () async {
+                  await onDeletSelectedShape();
+                },
+                backgroundColor: Colors.red,
+                heroTag: null,
+              ),
         const SizedBox(
           height: 10,
         ),
-        FloatingActionButton(
-          child: const Icon(Icons.delete),
-          onPressed: () {
-            onDeletSelectedShape();
-          },
-          backgroundColor: Colors.red,
-          heroTag: null,
-        )
+        _isStartingDrawing && _isPolygon
+            ? FloatingActionButton(
+                child: const Icon(Icons.save),
+                onPressed: () async {
+                  if (_isPolygon) {
+                    setState(() {
+                      _setPolygon();
+                      polygonLatLngs = <LatLng>[];
+                      _polyLines.clear();
+                    });
+                  }
+                },
+                heroTag: null,
+                backgroundColor: Colors.green,
+              )
+            : const SizedBox(
+                width: 0,
+                height: 0,
+              )
       ],
     );
   }
