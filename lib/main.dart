@@ -1,10 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import './pages/root_page.dart';
 import './services/authentication.dart';
 import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+// import 'package:firebase_messaging/firebase_messaging.dart';
+// import './services/pushnotification.dart';
+import './services/notificationService.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
   runApp(const MyApp());
 }
 
@@ -17,7 +23,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
-          theme: ThemeData(
+      theme: ThemeData(
         // This is the theme of your application.
         //
         // Try running your application with "flutter run". You'll see the
@@ -31,18 +37,28 @@ class MyApp extends StatelessWidget {
       ),
       home: FutureBuilder(
         // Initialize FlutterFire
-        future: Firebase.initializeApp(),
+        future: kIsWeb
+            ? Firebase.initializeApp(
+                options: const FirebaseOptions(
+                    apiKey: "AIzaSyD6pdwf7ZAFEziLhwupv0uln1HVV_3pqZg",
+                    authDomain: "geo-fencing-flutter.firebaseapp.com",
+                    projectId: "geo-fencing-flutter",
+                    storageBucket: "geo-fencing-flutter.appspot.com",
+                    messagingSenderId: "380600200961",
+                    appId: "1:380600200961:web:b32bd58f69568cbebbf500",
+                    measurementId: "G-6MMYZHWBRM"))
+            : Firebase.initializeApp(),
         builder: (context, snapshot) {
           // Check for errors
           if (snapshot.hasError) {
             return const Text("something went wrong on initializing firebase.");
           }
-    
+
           // Once complete, show your application
           if (snapshot.connectionState == ConnectionState.done) {
             return RootPage(auth: AuthService());
           }
-    
+
           // Otherwise, show something whilst waiting for initialization to complete
           return _buildWaitingScreen();
         },

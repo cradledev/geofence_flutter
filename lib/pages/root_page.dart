@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import './login_signup_page.dart';
 import '../services/authentication.dart';
 import './home.dart';
+
 import '../services/firestoreService.dart';
+
+// import '../services/notificationService.dart';
 
 class RootPage extends StatefulWidget {
   const RootPage({required this.auth});
 
   final AuthService auth;
-
   @override
   State<StatefulWidget> createState() => _RootPageState();
 }
