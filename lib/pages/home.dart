@@ -12,6 +12,8 @@ import 'package:location/location.dart' as loc;
 import '../services/firestoreService.dart';
 import '../services/notificationService.dart';
 
+import 'package:pointer_interceptor/pointer_interceptor.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({required this.geoFenceData, required this.userId});
 
@@ -150,7 +152,8 @@ class _HomePageState extends State<HomePage> {
             onTap: () {
               if (_isMarker && !_isStartingDrawing) {
                 onInit();
-                selectedMarker = _markers.firstWhereOrNull((element) => element.markerId.value == _data['markerId']);
+                selectedMarker = _markers.firstWhereOrNull(
+                    (element) => element.markerId.value == _data['markerId']);
                 // getSelectedMarker(
                 //     mt.LatLng(_data['position'][0], _data['position'][1]));
                 print(
@@ -281,7 +284,8 @@ class _HomePageState extends State<HomePage> {
         onTap: () {
           if (_isCircle && !_isStartingDrawing) {
             onInit();
-            selectedCircle = _circles.firstWhereOrNull((element) => element.circleId.value == circleIdVal);
+            selectedCircle = _circles.firstWhereOrNull(
+                (element) => element.circleId.value == circleIdVal);
           }
         });
     _circles.add(_tmp);
@@ -310,7 +314,8 @@ class _HomePageState extends State<HomePage> {
           if (_isMarker && !_isStartingDrawing) {
             onInit();
             // getSelectedMarker(mt.LatLng(point.latitude, point.longitude));
-            selectedMarker = _markers.firstWhereOrNull((element) => element.markerId.value == markerIdVal);
+            selectedMarker = _markers.firstWhereOrNull(
+                (element) => element.markerId.value == markerIdVal);
             print('selected marker is here ${selectedMarker?.markerId.value}');
           }
         });
@@ -611,15 +616,17 @@ class _HomePageState extends State<HomePage> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         polygonLatLngs.isNotEmpty
-            ? FloatingActionButton(
-                child: const Icon(Icons.undo),
-                onPressed: () {
-                  setState(() {
-                    polygonLatLngs.removeLast();
-                  });
-                },
-                backgroundColor: Colors.orange,
-                heroTag: null,
+            ? PointerInterceptor(
+                child: FloatingActionButton(
+                  child: const Icon(Icons.undo),
+                  onPressed: () {
+                    setState(() {
+                      polygonLatLngs.removeLast();
+                    });
+                  },
+                  backgroundColor: Colors.orange,
+                  heroTag: null,
+                ),
               )
             : const SizedBox(
                 width: 0,
@@ -627,17 +634,19 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(
           height: 10,
         ),
-        FloatingActionButton(
-          child: Icon(
-              !_isStartingDrawing ? Icons.draw_outlined : Icons.exit_to_app),
-          onPressed: () {
-            setState(() {
-              _isStartingDrawing = !_isStartingDrawing;
-              // _isStartingDeleting = false;
-            });
-          },
-          backgroundColor: Colors.purple,
-          heroTag: null,
+        PointerInterceptor(
+          child: FloatingActionButton(
+            child: Icon(
+                !_isStartingDrawing ? Icons.draw_outlined : Icons.exit_to_app),
+            onPressed: () {
+              setState(() {
+                _isStartingDrawing = !_isStartingDrawing;
+                // _isStartingDeleting = false;
+              });
+            },
+            backgroundColor: Colors.purple,
+            heroTag: null,
+          ),
         ),
         const SizedBox(
           height: 10,
@@ -647,27 +656,31 @@ class _HomePageState extends State<HomePage> {
                 width: 0,
                 height: 0,
               )
-            : FloatingActionButton(
-                child: const Icon(Icons.delete),
-                onPressed: () async {
-                  await onDeletSelectedShape();
-                },
-                backgroundColor: Colors.red,
-                heroTag: null,
+            : PointerInterceptor(
+                child: FloatingActionButton(
+                  child: const Icon(Icons.delete),
+                  onPressed: () async {
+                    await onDeletSelectedShape();
+                  },
+                  backgroundColor: Colors.red,
+                  heroTag: null,
+                ),
               ),
         const SizedBox(
           height: 10,
         ),
         _isStartingDrawing && _isPolygon
-            ? FloatingActionButton(
-                child: const Icon(Icons.save),
-                onPressed: () async {
-                  if (_isPolygon && _polyLines.isNotEmpty) {
-                    showAlertDialog(context, null);
-                  }
-                },
-                heroTag: null,
-                backgroundColor: Colors.green,
+            ? PointerInterceptor(
+                child: FloatingActionButton(
+                  child: const Icon(Icons.save),
+                  onPressed: () async {
+                    if (_isPolygon && _polyLines.isNotEmpty) {
+                      showAlertDialog(context, null);
+                    }
+                  },
+                  heroTag: null,
+                  backgroundColor: Colors.green,
+                ),
               )
             : const SizedBox(
                 width: 0,
@@ -679,13 +692,16 @@ class _HomePageState extends State<HomePage> {
 
   showAlertDialog(BuildContext context, LatLng? point) {
     // set up the buttons
-    Widget cancelButton = TextButton(
+    Widget cancelButton = PointerInterceptor(
+        child: TextButton(
       child: const Text("Cancel"),
       onPressed: () {
         Navigator.of(context).pop();
       },
-    );
-    Widget continueButton = TextButton(
+    ));
+    ;
+    Widget continueButton = PointerInterceptor(
+        child: TextButton(
       child: const Text("Confirm"),
       onPressed: () {
         if (tag!.isNotEmpty) {
@@ -709,7 +725,7 @@ class _HomePageState extends State<HomePage> {
         }
         Navigator.of(context).pop();
       },
-    );
+    ));
     // set up the AlertDialog
     AlertDialog alert = AlertDialog(
       title: const Text("Tag Input"),
@@ -815,104 +831,112 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _isPolygon = true;
-                        _isMarker = false;
-                        _isCircle = false;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                        primary: _isPolygon ? Colors.amber : Colors.blue),
-                    child: const Text(
-                      'Polygon',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        polygonLatLngs = <LatLng>[];
-                        _polyLines.clear();
-                        _isPolygon = false;
-                        _isMarker = true;
-                        _isCircle = false;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                        primary: _isMarker ? Colors.amber : Colors.blue),
-                    child: const Text(
-                      'Marker',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                  PointerInterceptor(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _isPolygon = true;
+                          _isMarker = false;
+                          _isCircle = false;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                          primary: _isPolygon ? Colors.amber : Colors.blue),
+                      child: const Text(
+                        'Polygon',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ),
                   ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      setState(() {
-                        polygonLatLngs = <LatLng>[];
-                        _polyLines.clear();
-                        _isPolygon = false;
-                        _isMarker = false;
-                        _isCircle = true;
-                        radius = 50;
-                      });
-
-                      return await showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          backgroundColor: Colors.grey[900],
-                          title: const Text(
-                            'Choose the radius (m)',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
-                          ),
-                          content: Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: Material(
-                                color: Colors.black,
-                                child: TextField(
-                                  style: const TextStyle(
-                                      fontSize: 16, color: Colors.white),
-                                  decoration: const InputDecoration(
-                                    icon: Icon(Icons.zoom_out_map),
-                                    hintText: 'Ex: 100',
-                                    suffixText: 'meters',
-                                  ),
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(),
-                                  onChanged: (input) {
-                                    setState(() {
-                                      radius = double.parse(input);
-                                    });
-                                  },
-                                ),
-                              )),
-                          actions: <Widget>[
-                            TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text(
-                                  'Ok',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
+                  PointerInterceptor(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          polygonLatLngs = <LatLng>[];
+                          _polyLines.clear();
+                          _isPolygon = false;
+                          _isMarker = true;
+                          _isCircle = false;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                          primary: _isMarker ? Colors.amber : Colors.blue),
+                      child: const Text(
+                        'Marker',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  PointerInterceptor(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        setState(() {
+                          polygonLatLngs = <LatLng>[];
+                          _polyLines.clear();
+                          _isPolygon = false;
+                          _isMarker = false;
+                          _isCircle = true;
+                          radius = 50;
+                        });
+                  
+                        return await showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            backgroundColor: Colors.grey[900],
+                            title: const Text(
+                              'Choose the radius (m)',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
+                            ),
+                            content: Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Material(
+                                  color: Colors.black,
+                                  child: TextField(
+                                    style: const TextStyle(
+                                        fontSize: 16, color: Colors.white),
+                                    decoration: const InputDecoration(
+                                      icon: Icon(Icons.zoom_out_map),
+                                      hintText: 'Ex: 100',
+                                      suffixText: 'meters',
+                                    ),
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(),
+                                    onChanged: (input) {
+                                      setState(() {
+                                        radius = double.parse(input);
+                                      });
+                                    },
                                   ),
                                 )),
-                          ],
+                            actions: <Widget>[
+                              PointerInterceptor(
+                                child: TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text(
+                                      'Ok',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                          primary: _isCircle ? Colors.amber : Colors.blue),
+                      child: const Text(
+                        'Circle',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                        primary: _isCircle ? Colors.amber : Colors.blue),
-                    child: const Text(
-                      'Circle',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
                       ),
                     ),
                   ),
